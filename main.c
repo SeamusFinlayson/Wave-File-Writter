@@ -1,3 +1,7 @@
+//File Name: main.c
+//Author: Seamus Finlayson
+//Date: 2023-01-30
+
 #define _CRT_SECURE_NO_WARNINGS
 #include <stdio.h>
 #include <math.h>
