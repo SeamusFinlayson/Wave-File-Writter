@@ -5,20 +5,10 @@
 
 #define PI 3.14159265359
 
-/*struct wavHeader {
-
-	//riff chunk
-	char chunkID[4];
-
-	//fmt subchunk
-
-	//data sub chunk
-};*/
-
-//write two byte data to a file in little endian (LE) byte order
+///< write two byte data to a file in little endian (LE) byte order
 void writeTwoBytesLE(unsigned short twoByteData, FILE *file);
 
-//write four byte data to a file in little endian (LE) byte order
+///< write four byte data to a file in little endian (LE) byte order
 void writeFourBytesLE(unsigned int fourByteData, FILE *file);
 
 int main(void) {
@@ -39,72 +29,65 @@ int main(void) {
 	//write header of wave file
 	else {
 
-	//riff chunk
+		/////////////////////////////////////////////////////////////
+		// riff chunk
+		/////////////////////////////////////////////////////////////
+		
 		//chunk id
 		fprintf(waveFile, "RIFF");
 
 		//chunk size
+		writeFourBytesLE(0x244c1d00, waveFile);
+
+		//code for alternate byte writing method
 		//char chuckSize[] = { 0x24, 0x4c, 0x1d, 0x00 };
 		//fwrite(chuckSize, sizeof(char), sizeof(chuckSize) / sizeof(char), waveFile);
-		writeFourBytesLE(0x244c1d00, waveFile);
 
 		//format
 		fprintf(waveFile, "WAVE");
 
-	//fmt sub chunk
+		/////////////////////////////////////////////////////////////
+		// fmt sub chunk
+		/////////////////////////////////////////////////////////////
+		
 		//subchunk 1 ID
 		fprintf(waveFile, "fmt ");
 
 		//sub chunk 1 size
-		//char subchunk1Size[] = { 0x10, 0x00, 0x00, 0x00 };
-		//fwrite(subchunk1Size, sizeof(char), sizeof(subchunk1Size) / sizeof(char), waveFile);
 		writeFourBytesLE(0x10000000, waveFile);
 
 		//audio format
-		//unsigned short audioFormat = 0x0100;
-		//audioFormat = ((audioFormat << 8) & 0xff00) | ((audioFormat >> 8) & 0x00ff);
-		//char audioFormat[] = { 0x01, 0x00 };
-		//fwrite(&audioFormat, sizeof(audioFormat), 1, wavePtr);
 		writeTwoBytesLE(0x0100, waveFile);
 
 		//num channels
-		/*char numChannels [] = { 0x01, 0x00 };
-		fwrite(numChannels, sizeof(char), sizeof(numChannels) / sizeof(char), waveFile);*/
 		writeTwoBytesLE(0x0100, waveFile);
 
 		//sample rate
-		/*char sampleRate[] = { 0x80, 0x3e, 0x00, 0x00 };
-		fwrite(sampleRate, sizeof(char), sizeof(sampleRate) / sizeof(char), waveFile);*/
 		writeFourBytesLE(0x803e0000, waveFile);
 
 		//byte rate
-		/*char byteRate[] = { 0x00, 0x7d, 0x00, 0x00 };
-		fwrite(byteRate, sizeof(char), sizeof(byteRate) / sizeof(char), waveFile);*/
 		writeFourBytesLE(0x007d0000, waveFile);
 
 		//block align
-		/*char blockAlign[] = { 0x02, 0x00 };
-		fwrite(blockAlign, sizeof(char), sizeof(blockAlign) / sizeof(char), waveFile);*/
 		writeTwoBytesLE(0x0200, waveFile);
 
 		//bits per sample
-		/*char bitsPerSample[] = { 0x10, 0x00 };
-		fwrite(bitsPerSample, sizeof(char), sizeof(bitsPerSample) / sizeof(char), waveFile);*/
 		writeTwoBytesLE(0x1000, waveFile);
 
-	//datasub chunk
+		/////////////////////////////////////////////////////////////
+		// data sub chunk
+		/////////////////////////////////////////////////////////////
+		
 		//subchunk2id
 		fprintf(waveFile, "data");
 
 		//subchunk 2 size
-		/*char subchunk2Size[] = { 0x00, 0x4c, 0x1d, 0x00 };
-		fwrite(subchunk2Size, sizeof(char), sizeof(subchunk2Size) / sizeof(char), waveFile);*/
 		writeFourBytesLE(0x004c1d00, waveFile);
 
 		//write 60s of data to file
-		short sample;
-		short AMPLITUDE = -0X7F00;
-		short OFFSET = 0;
+		volatile short sample;
+		const short AMPLITUDE = -0X7F00;
+		const short OFFSET = 0;
 		for (int i = 0; i < 16000*60; i++) {
 			
 			//sine wave at 300Hz
