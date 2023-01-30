@@ -10,10 +10,10 @@
 #define PI 3.14159265359
 
 ///< write two byte data to a file in little endian (LE) byte order
-void writeTwoBytesLE(unsigned short twoByteData, FILE *file);
+unsigned short writeTwoBytesLE(unsigned short twoByteData, FILE *file);
 
 ///< write four byte data to a file in little endian (LE) byte order
-void writeFourBytesLE(unsigned int fourByteData, FILE *file);
+unsigned int writeFourBytesLE(unsigned int fourByteData, FILE *file);
 
 int main(void) {
 
@@ -43,7 +43,7 @@ int main(void) {
 		//chunk size
 		writeFourBytesLE(0x244c1d00, waveFile);
 
-		//code for alternate byte writing method
+		//sample code for alternate byte writing method
 		//char chuckSize[] = { 0x24, 0x4c, 0x1d, 0x00 };
 		//fwrite(chuckSize, sizeof(char), sizeof(chuckSize) / sizeof(char), waveFile);
 
@@ -110,7 +110,7 @@ int main(void) {
 	return 0;
 }
 
-void writeTwoBytesLE(unsigned short twoByteData, FILE *file) {
+unsigned short writeTwoBytesLE(unsigned short twoByteData, FILE *file) {
 
 	//byte swap data
 	twoByteData = 
@@ -118,11 +118,13 @@ void writeTwoBytesLE(unsigned short twoByteData, FILE *file) {
 		((twoByteData >> 8) & 0x00ff);
 
 	//write to file
-	fwrite(&twoByteData , sizeof(twoByteData ), 1, file);
+	fwrite(&twoByteData , sizeof(twoByteData), 1, file);
 
+	//return little endian data
+	return twoByteData;
 }
 
-void writeFourBytesLE(unsigned int fourByteData, FILE *file) {
+unsigned int writeFourBytesLE(unsigned int fourByteData, FILE *file) {
 
 	//byte swap data
 	fourByteData = 
@@ -133,4 +135,7 @@ void writeFourBytesLE(unsigned int fourByteData, FILE *file) {
 
 	//write to file
 	fwrite(&fourByteData, sizeof(fourByteData), 1, file);
+
+	//return little endian data
+	return fourByteData;
 }
