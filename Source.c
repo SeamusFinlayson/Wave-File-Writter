@@ -30,10 +30,10 @@ int main(void) {
 	FILE *waveFile;
 	waveFile = fopen("Music of the Gods.wav", "wb");
 
-	//check if file was oppened
+	//check for failure to open file
 	if (waveFile == NULL) {
 
-		//report error
+		//report error in terminal
 		printf("Error file not oppened\n");
 	}
 	//write header of wave file
@@ -85,30 +85,31 @@ int main(void) {
 		//block align
 		/*char blockAlign[] = { 0x02, 0x00 };
 		fwrite(blockAlign, sizeof(char), sizeof(blockAlign) / sizeof(char), waveFile);*/
+		writeTwoBytesLE(0x0200, waveFile);
 
 		//bits per sample
-		char bitsPerSample[] = { 0x10, 0x00 };
-		fwrite(bitsPerSample, sizeof(char), sizeof(bitsPerSample) / sizeof(char), waveFile);
+		/*char bitsPerSample[] = { 0x10, 0x00 };
+		fwrite(bitsPerSample, sizeof(char), sizeof(bitsPerSample) / sizeof(char), waveFile);*/
+		writeTwoBytesLE(0x1000, waveFile);
 
 	//datasub chunk
 		//subchunk2id
 		fprintf(waveFile, "data");
 
 		//subchunk 2 size
-		char subchunk2Size[] = { 0x00, 0x4c, 0x1d, 0x00 };
-		fwrite(subchunk2Size, sizeof(char), sizeof(subchunk2Size) / sizeof(char), waveFile);
+		/*char subchunk2Size[] = { 0x00, 0x4c, 0x1d, 0x00 };
+		fwrite(subchunk2Size, sizeof(char), sizeof(subchunk2Size) / sizeof(char), waveFile);*/
+		writeFourBytesLE(0x004c1d00, waveFile);
 
 		//write 60s of data to file
 		short sample;
-		short MAGNITUDE = -0X7F00;
+		short AMPLITUDE = -0X7F00;
 		short OFFSET = 0;
 		for (int i = 0; i < 16000*60; i++) {
 			
 			//sine wave at 300Hz
 			//sample = 4097; //for testing
-			sample = (short)(MAGNITUDE * sin(2 * PI * 300 * i / 16000) + OFFSET );
-
-			//sample = ((sample << 8) & 0xff00) | ((sample >> 8) & 0x00ff); // bitswap to little endian, not needed but useful
+			sample = (short)(AMPLITUDE * sin(2 * PI * 300 * i / 16000) + OFFSET );
 
 			//write to file
 			fwrite(&sample, sizeof(sample), 1, waveFile);
