@@ -10,12 +10,12 @@
 #define PI 3.14159265359
 
 //user changable audio parameters
-#define SAMPLE_RATE 44.1E3		//samples/second
-#define BITS_PER_SAMPLE 16		//bits
-#define AUDIO_DURATION 30		//seconds -- must be less than 34 hours to prevent overflow
+#define SAMPLE_RATE 16000		//samples/second
+#define AUDIO_DURATION 10		//seconds -- must be less than 34 hours to prevent overflow
 
 //fixed audio parameters
 #define SUBCHUNK1_SIZE 16		//size format subchunk
+#define BITS_PER_SAMPLE 16		//bits -- can be changed but data types must be changed
 #define AUDIO_FORMAT 1			//1 for Pulse-code modulation (PCM)
 #define NUM_CHANNELS 1			//1 channel for mono audio
 
@@ -100,32 +100,30 @@ int main(void) {
 
 		//write 60s of data to file -- will need to offset and take 2's compliment of raw data
 		volatile short sample;
-		const float AMPLITUDE = 0X0800;
-		float frequency = 300;
-		const double ONE_HZ = 2 * PI / SAMPLE_RATE; //Digital frequency equivalent to 1 Hz
+		double AMPLITUDE = 0X2000;
+		double frequencyDeviation = 300;
+		const double ONE_HZ = 2 * PI / SAMPLE_RATE; //Digital frequency equivalent to 1 Hz -- units of cycles/sample
 		int noiseFrequency = 0;
+		double decay = 0;
 		srand(time(NULL));
-		for (int i = 0; i < SAMPLE_RATE * AUDIO_DURATION; i++) {
-
-			//if (!(i % (SAMPLE_RATE/10000))) {
-			//	//noiseFrequency = (rand() % 8000) - 4000;
-			//	//frequency -= 0.001;
-			//}
-
+		for (int i = 1; i <= SAMPLE_RATE * AUDIO_DURATION; i++) {
 
 			//sine wave at 300Hz - for sample size greater than 8 bytes, data is stored as signed short
-			frequency = 300 + (float)300 * exp((float)i / ((float)-2 * SAMPLE_RATE));//sin(ONE_HZ * i);
-			sample = (short)(AMPLITUDE * sin(ONE_HZ * frequency * i));
-			//printf("sample: %d\n", sample);
-
-			//if (!(i % 2000))
-			//	printf("dev is: %f\n", frequency);
+			sample = 0;
+			//sample += (short)(sin((double)i * ONE_HZ * 300));
+			//decay = exp(-ONE_HZ * (i % ))
+			sample += AMPLITUDE * sin(i * ONE_HZ * 262);
+			sample += AMPLITUDE * sin(i * ONE_HZ * 330);
+			sample += AMPLITUDE * sin(i * ONE_HZ * 392);
 
 			//noise
-			//sample += (short)(AMPLITUDE / 100 * sin(ONE_HZ * noiseFrequency * i));
+			if (!(i % (SAMPLE_RATE / 10000))) {
+				noiseFrequency = (rand() % 12000) - 4000;
+			}
+			//sample += (short)(AMPLITUDE / 20 * sin(ONE_HZ * noiseFrequency * i));
 
 			//write to file
-			fwrite(&sample, sizeof(sample), 1, waveFile);
+			writeTwoBytesLE(sample, waveFile);
 		}
 
 		//close file
