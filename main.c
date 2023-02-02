@@ -1,15 +1,29 @@
+//File Name: main.c
+//Author: Seamus Finlayson
+//Date: 2023-01-30
+
 #define _CRT_SECURE_NO_WARNINGS
 #include <stdio.h>
 #include <math.h>
-//#include <stdlib.h>
+#include <stdlib.h>
 
 #define PI 3.14159265359
 
-///< write two byte data to a file in little endian (LE) byte order
-void writeTwoBytesLE(unsigned short twoByteData, FILE *file);
+//user changable audio parameters
+#define SAMPLE_RATE 16000		//samples/second
+#define AUDIO_DURATION 10		//seconds -- must be less than 34 hours to prevent overflow
 
-///< write four byte data to a file in little endian (LE) byte order
-void writeFourBytesLE(unsigned int fourByteData, FILE *file);
+//fixed audio parameters
+#define SUBCHUNK1_SIZE 16		//size format subchunk
+#define BITS_PER_SAMPLE 16		//bits -- can be changed but data types must be changed
+#define AUDIO_FORMAT 1			//1 for Pulse-code modulation (PCM)
+#define NUM_CHANNELS 1			//1 channel for mono audio
+
+// Write two byte data to a file in little endian (LE) byte order.
+unsigned short writeTwoBytesLE(unsigned short twoByteData, FILE* file);
+
+// Write four byte data to a file in little endian (LE) byte order.
+unsigned int writeFourBytesLE(unsigned int fourByteData, FILE* file);
 
 int main(void) {
 
@@ -17,7 +31,7 @@ int main(void) {
 	printf("Running...\n\n");
 
 	//open file for writing
-	FILE *waveFile;
+	FILE* waveFile;
 	waveFile = fopen("Music of the Gods.wav", "wb");
 
 	//check for failure to open file
@@ -32,16 +46,13 @@ int main(void) {
 		/////////////////////////////////////////////////////////////
 		// riff chunk
 		/////////////////////////////////////////////////////////////
-		
+
 		//chunk id
 		fprintf(waveFile, "RIFF");
 
 		//chunk size
-		writeFourBytesLE(0x244c1d00, waveFile);
-
-		//code for alternate byte writing method
-		//char chuckSize[] = { 0x24, 0x4c, 0x1d, 0x00 };
-		//fwrite(chuckSize, sizeof(char), sizeof(chuckSize) / sizeof(char), waveFile);
+		unsigned int chunkSize = (BITS_PER_SAMPLE * SAMPLE_RATE * AUDIO_DURATION) / 8 + 36; //size of file after this header = data + headers
+		writeFourBytesLE(chunkSize, waveFile);
 
 		//format
 		fprintf(waveFile, "WAVE");
@@ -49,53 +60,70 @@ int main(void) {
 		/////////////////////////////////////////////////////////////
 		// fmt sub chunk
 		/////////////////////////////////////////////////////////////
-		
+
 		//subchunk 1 ID
 		fprintf(waveFile, "fmt ");
 
 		//sub chunk 1 size
-		writeFourBytesLE(0x10000000, waveFile);
+		writeFourBytesLE(SUBCHUNK1_SIZE, waveFile);
 
 		//audio format
-		writeTwoBytesLE(0x0100, waveFile);
+		writeTwoBytesLE(AUDIO_FORMAT, waveFile);
 
 		//num channels
-		writeTwoBytesLE(0x0100, waveFile);
+		writeTwoBytesLE(NUM_CHANNELS, waveFile);
 
 		//sample rate
-		writeFourBytesLE(0x803e0000, waveFile);
+		writeFourBytesLE(SAMPLE_RATE, waveFile);
 
 		//byte rate
-		writeFourBytesLE(0x007d0000, waveFile);
+		unsigned int byteRate = SAMPLE_RATE * NUM_CHANNELS * BITS_PER_SAMPLE / 8;
+		writeFourBytesLE(byteRate, waveFile);
 
 		//block align
-		writeTwoBytesLE(0x0200, waveFile);
+		unsigned short blockAlign = NUM_CHANNELS * BITS_PER_SAMPLE / 8;
+		writeTwoBytesLE(blockAlign, waveFile);
 
 		//bits per sample
-		writeTwoBytesLE(0x1000, waveFile);
+		writeTwoBytesLE(BITS_PER_SAMPLE, waveFile);
 
 		/////////////////////////////////////////////////////////////
 		// data sub chunk
 		/////////////////////////////////////////////////////////////
-		
+
 		//subchunk2id
 		fprintf(waveFile, "data");
 
 		//subchunk 2 size
-		writeFourBytesLE(0x004c1d00, waveFile);
+		unsigned int subchunk2Size = BITS_PER_SAMPLE * SAMPLE_RATE * AUDIO_DURATION / 8;
+		writeFourBytesLE(subchunk2Size, waveFile);
 
-		//write 60s of data to file
+		//write 60s of data to file -- will need to offset and take 2's compliment of raw data
 		volatile short sample;
-		const short AMPLITUDE = -0X7F00;
-		const short OFFSET = 0;
-		for (int i = 0; i < 16000*60; i++) {
-			
-			//sine wave at 300Hz
-			//sample = 4097; //for testing
-			sample = (short)(AMPLITUDE * sin(2 * PI * 300 * i / 16000) + OFFSET );
+		double AMPLITUDE = 0X2000;
+		double frequencyDeviation = 300;
+		const double ONE_HZ = 2 * PI / SAMPLE_RATE; //Digital frequency equivalent to 1 Hz -- units of cycles/sample
+		int noiseFrequency = 0;
+		double decay = 0;
+		srand(time(NULL));
+		for (int i = 1; i <= SAMPLE_RATE * AUDIO_DURATION; i++) {
+
+			//sine wave at 300Hz - for sample size greater than 8 bytes, data is stored as signed short
+			sample = 0;
+			//sample += (short)(sin((double)i * ONE_HZ * 300));
+			//decay = exp(-ONE_HZ * (i % ))
+			sample += AMPLITUDE * sin(i * ONE_HZ * 262);
+			sample += AMPLITUDE * sin(i * ONE_HZ * 330);
+			sample += AMPLITUDE * sin(i * ONE_HZ * 392);
+
+			//noise
+			if (!(i % (SAMPLE_RATE / 10000))) {
+				noiseFrequency = (rand() % 12000) - 4000;
+			}
+			//sample += (short)(AMPLITUDE / 20 * sin(ONE_HZ * noiseFrequency * i));
 
 			//write to file
-			fwrite(&sample, sizeof(sample), 1, waveFile);
+			writeTwoBytesLE(sample, waveFile);
 		}
 
 		//close file
@@ -106,27 +134,32 @@ int main(void) {
 	return 0;
 }
 
-void writeTwoBytesLE(unsigned short twoByteData, FILE *file) {
+unsigned short writeTwoBytesLE(unsigned short twoByteData, FILE* file) {
 
-	//byte swap data
-	twoByteData = 
-		((twoByteData << 8) & 0xff00) | 
-		((twoByteData >> 8) & 0x00ff);
+	//byte swap data - may need on microcontroller depending on system endianness
+	//twoByteData =
+	//	((twoByteData << 8) & 0xff00) | 
+	//	((twoByteData >> 8) & 0x00ff);
 
 	//write to file
-	fwrite(&twoByteData , sizeof(twoByteData ), 1, file);
+	fwrite(&twoByteData, sizeof(twoByteData), 1, file);
 
+	//return little endian data
+	return twoByteData;
 }
 
-void writeFourBytesLE(unsigned int fourByteData, FILE *file) {
+unsigned int writeFourBytesLE(unsigned int fourByteData, FILE* file) {
 
-	//byte swap data
-	fourByteData = 
-		((fourByteData << 3 * 8) & 0xff000000) | 
-		((fourByteData << 8) & 0x00ff0000) | 
-		((fourByteData >> 8) & 0x0000ff00) | 
-		((fourByteData >> 3 * 8) & 0x000000ff);
+	//byte swap data - may need on microcontroller depending on system endianness
+	//fourByteData = 
+	//	((fourByteData << 3 * 8) & 0xff000000) | 
+	//	((fourByteData << 8) & 0x00ff0000) | 
+	//	((fourByteData >> 8) & 0x0000ff00) | 
+	//	((fourByteData >> 3 * 8) & 0x000000ff);
 
 	//write to file
 	fwrite(&fourByteData, sizeof(fourByteData), 1, file);
+
+	//return little endian data
+	return fourByteData;
 }
