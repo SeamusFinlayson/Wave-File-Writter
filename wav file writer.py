@@ -90,10 +90,7 @@ class waveFileClass:
         # subchunk 2 size
         self.writeIntToFile(self.SUBCHUNK2_SIZE, 4)
 
-        # I want to store incoming samples in a different binary file then once all samples for a file have been collected 
-        # find the length of the file with the samples and append it to the file with the proper header.
-
-        # For now this needs to be tested though.
+        # add raw data to file with header
         with open(self.FILE_NAME, "ab") as header, open(self.RAW_DATA_FILE, "rb") as rawData:
             header.write(rawData.read())
 
